@@ -188,24 +188,18 @@ FhemSwitch.prototype = {
         var state = body.trim();
         if (state.match(/^[A-D]./))  // EnOcean
           state = state.slice(1,2);
-          
-        var value;
         
+        //this.log('getPowerState: >' + state + '<');
+                
         switch (state) {
           case  '0':
-          case  'off':  value = "0"; break;
+          case  'off':  callback(null, false); break;
           case  'I':
           case  '1':
-          case  'on':   value = "1"; break;
+          case  'on':   callback(null, true); break;
           default:      // nothing
         }
         
-        this.log('getPowerState: >' + state + '< value: ' + value);
-        
-        if (value) 
-          callback(null, value);
-        else
-          callback(null, err);
       } else {
         this.log(err);
         callback(null, err);
@@ -221,9 +215,9 @@ FhemSwitch.prototype = {
     
     this.currentCharacteristic = FhemSwitchService
       .getCharacteristic(Characteristic.On)
-      .on('set', this.setPowerState.bind(this))
-      .on('get', this.getPowerState.bind(this));
-
+      .on('get', this.getPowerState.bind(this))
+      .on('set', this.setPowerState.bind(this));
+      
     return [FhemSwitchService];
   }
 };
