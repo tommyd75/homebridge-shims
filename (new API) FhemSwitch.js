@@ -175,7 +175,7 @@ FhemSwitch.prototype = {
       }
     }.bind(this));
   },
-  
+    
   getPowerState: function(callback) {
     
     //this.log("Getting current state...");
@@ -202,7 +202,31 @@ FhemSwitch.prototype = {
         
       } else {
         this.log(err);
-        callback(null, err);
+        callback(err);
+        if(response)
+          this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
+      }
+    }.bind(this));
+  },
+  
+  identify: function(callback) {
+    this.log("Identify requested!");
+    //callback();
+    
+    var cmd = 'set ' + this.name + ' ' + 'on-for-timer 2';
+    //this.log("cmd: " + cmd);
+    
+    var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';    
+    //this.log(fhem_url);
+        
+    request({url: fhem_url}, function(err, response, body) {
+
+      if (!err && response.statusCode == 200) {
+        callback();
+        //this.log("State change complete.");
+      } else {
+        this.log(err);
+        callback(err)
         if(response)
           this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
       }
@@ -210,7 +234,14 @@ FhemSwitch.prototype = {
   },
   
   getServices: function() {
-  
+    
+    var informationService = new Service.AccessoryInformation();
+    
+    informationService
+      .setCharacteristic(Characteristic.Manufacturer, "FHEM Manufacturer")
+      .setCharacteristic(Characteristic.Model, "FHEM Model")
+      .setCharacteristic(Characteristic.SerialNumber, "FHEM Serial Number");
+        
     var FhemSwitchService = new Service.Switch();
     
     this.currentCharacteristic = FhemSwitchService
@@ -218,6 +249,6 @@ FhemSwitch.prototype = {
       .on('get', this.getPowerState.bind(this))
       .on('set', this.setPowerState.bind(this));
       
-    return [FhemSwitchService];
+    return [informationService, FhemSwitchService];
   }
 };
