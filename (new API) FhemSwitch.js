@@ -151,7 +151,6 @@ FhemSwitch.prototype = {
       case false:       state = 'off'; break;
       case 1:
       case true:        state = 'on';  break; 
-      case 'identify':  state = 'on-for-timer 2'; break;
       default:          this.log("setPowerState: state undefined! powerOn: >" + powerOn + "<");
     }
     
@@ -210,8 +209,7 @@ FhemSwitch.prototype = {
   },
   
   identify: function(callback) {
-    this.log("Identify requested!");
-    //callback();
+    //this.log("Identify requested!");
     
     var cmd = 'set ' + this.name + ' ' + 'on-for-timer 2';
     //this.log("cmd: " + cmd);
@@ -240,7 +238,8 @@ FhemSwitch.prototype = {
     informationService
       .setCharacteristic(Characteristic.Manufacturer, "FHEM Manufacturer")
       .setCharacteristic(Characteristic.Model, "FHEM Model")
-      .setCharacteristic(Characteristic.SerialNumber, "FHEM Serial Number");
+      .setCharacteristic(Characteristic.SerialNumber, "FHEM Serial Number")
+      .setCharacteristic(Characteristic.Name, this.name);
         
     var FhemSwitchService = new Service.Switch();
     
