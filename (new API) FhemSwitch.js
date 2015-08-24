@@ -31,10 +31,10 @@
 }
 */
 
-//var types = require("HAP-NodeJS/accessories/types.js");
 var Service = require("HAP-NodeJS").Service;
 var Characteristic = require("HAP-NodeJS").Characteristic;
 var request = require("request");
+
 var fs = require('fs');
 var path = require('path');
 
