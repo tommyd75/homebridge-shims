@@ -1,5 +1,4 @@
 // Description: Acceccory Shim to use with homebridge https://github.com/nfarina/homebridge
-// Branch: support-new-api
 // Copy this file into the folder: homebridge/accessories
 
 /* config.json Example:
