@@ -138,42 +138,7 @@ FhemSwitch.prototype = {
       setTimeout( function(){this.startLongpoll()}.bind(this), 5000 );
     }.bind(this) );
   },
-  
-  setPowerState: function(powerOn, callback) {
-    
-    //this.log("setPowerState: " + powerOn);
-    
-    var state = "";
-    
-    switch (powerOn) {
-      case 0:
-      case false:       state = 'off'; break;
-      case 1:
-      case true:        state = 'on';  break; 
-      default:          this.log("setPowerState: state undefined! powerOn: >" + powerOn + "<");
-    }
-    
-    var cmd = 'set ' + this.name + ' ' + state;
-    //this.log("cmd: " + cmd);
-    
-    var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';    
-    //this.log(fhem_url);
-        
-    request({url: fhem_url}, function(err, response, body) {
-
-      if (!err && response.statusCode == 200) {
-        this.currentValue = powerOn;
-        callback();
-        //this.log("State change complete.");
-      } else {
-        this.log(err);
-        callback(err)
-        if(response)
-          this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
-      }
-    }.bind(this));
-  },
-    
+      
   getPowerState: function(callback) {
     
     //this.log("Getting current state...");
@@ -191,16 +156,60 @@ FhemSwitch.prototype = {
                 
         switch (state) {
           case  '0':
-          case  'off':  callback(null, false); break;
+          case  'off':   this.currentValue = false; break;
           case  'I':
           case  '1':
-          case  'on':   callback(null, true); break;
+          case  'on':    this.currentValue = true; break;
           default:      // nothing
         }
-        
-      } else {
-        this.log(err);
+        callback(null, this.currentValue);
+      } 
+      else {
         callback(err);
+        this.log(err);
+        if(response)
+          this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
+      }
+    }.bind(this));
+  },
+  
+  setPowerState: function(powerOn, callback) {
+    
+    //this.log("setPowerState: " + powerOn);
+    if (powerOn == this.currentValue) {
+      callback();
+      return;
+    }
+    
+    var state = "";
+    
+    switch (powerOn) {
+      case 0:
+      case false:       state = 'off'; break;
+      case 1:
+      case true:        state = 'on';  break; 
+      default:          
+        this.log("setPowerState: state undefined! powerOn: >" + powerOn + "<");
+        callback();
+        return;
+    }
+    
+    var cmd = 'set ' + this.name + ' ' + state;
+    //this.log("cmd: " + cmd);
+    
+    var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';    
+    //this.log(fhem_url);
+        
+    request({url: fhem_url}, function(err, response, body) {
+
+      if (!err && response.statusCode == 200) {
+        this.currentValue = powerOn;
+        callback();
+        //this.log("State change complete.");
+      }
+      else {
+        callback(err)
+        this.log(err);
         if(response)
           this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
       }
@@ -221,7 +230,8 @@ FhemSwitch.prototype = {
       if (!err && response.statusCode == 200) {
         callback();
         //this.log("State change complete.");
-      } else {
+      } 
+      else {
         this.log(err);
         callback(err)
         if(response)
