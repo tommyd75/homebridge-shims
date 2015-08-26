@@ -58,7 +58,7 @@ function FhemSwitch(log, config) {
   this.base_url = base_url;
   this.connection = { 'base_url': this.base_url, 'request': request };
 
-  this.currentCharacteristic;
+  this.currentCharacteristic = {};
   this.currentValue = false;
 
   this.longpoll_running = false;
@@ -117,7 +117,7 @@ FhemSwitch.prototype = {
           if(fhemvalue != this.currentValue) { 
             //this.log( 'fhemvalue: ' + fhemvalue);
             this.currentValue = fhemvalue;        
-            this.currentCharacteristic.setValue(fhemvalue);
+            this.currentCharacteristic['On'].setValue(fhemvalue);
           }
         }
       }
@@ -252,7 +252,7 @@ FhemSwitch.prototype = {
         
     var FhemSwitchService = new Service.Switch();
     
-    this.currentCharacteristic = FhemSwitchService
+    this.currentCharacteristic['On'] = FhemSwitchService
       .getCharacteristic(Characteristic.On)
       .on('get', this.getPowerState.bind(this))
       .on('set', this.setPowerState.bind(this));
