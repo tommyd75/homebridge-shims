@@ -67,6 +67,10 @@ function FhemSwitch(log, config) {
 
 FhemSwitch.prototype = {
 
+  /**
+  * FHEM Longpoll
+  */
+  
   startLongpoll: function() {
   
     if( this.longpoll_running )
@@ -139,6 +143,10 @@ FhemSwitch.prototype = {
     }.bind(this) );
   },
       
+  /**
+  * Characteristic.On
+  */
+  
   getPowerState: function(callback) {
     
     //this.log("Getting current state...");
@@ -216,6 +224,10 @@ FhemSwitch.prototype = {
     }.bind(this));
   },
   
+  /**
+  * Accessory Information Identify 
+  */
+  
   identify: function(callback) {
     //this.log("Identify requested!");
     
@@ -239,6 +251,10 @@ FhemSwitch.prototype = {
       }
     }.bind(this));
   },
+  
+  /**
+  * Service and Characteristics
+  */
   
   getServices: function() {
     
