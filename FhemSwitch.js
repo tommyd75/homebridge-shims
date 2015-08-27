@@ -118,10 +118,10 @@ FhemSwitch.prototype = {
             case 'off': fhemvalue = false; break;
           }
           
-          if(fhemvalue != this.currentValue['On']) {
+          if(fhemvalue != this.currentValue.On) {
             //this.log( 'fhemvalue: ' + fhemvalue);
-            this.currentValue['On'] = fhemvalue;        
-            this.Characteristic['On'].setValue(fhemvalue);
+            this.currentValue.On = fhemvalue;        
+            this.Characteristic.On.setValue(fhemvalue);
           }
         }
       }
@@ -164,13 +164,13 @@ FhemSwitch.prototype = {
                 
         switch (state) {
           case  '0':
-          case  'off':   this.currentValue['On'] = false; break;
+          case  'off':   this.currentValue.On = false; break;
           case  'I':
           case  '1':
-          case  'on':    this.currentValue['On'] = true; break;
+          case  'on':    this.currentValue.On = true; break;
           default:      // nothing
         }
-        callback(null, this.currentValue['On']);
+        callback(null, this.currentValue.On);
       } 
       else {
         callback(err);
@@ -184,7 +184,7 @@ FhemSwitch.prototype = {
   setPowerState: function(powerOn, callback) {
     
     //this.log("setPowerState: " + powerOn);
-    if (powerOn == this.currentValue['On']) {
+    if (powerOn == this.currentValue.On) {
       callback();
       return;
     }
@@ -211,7 +211,7 @@ FhemSwitch.prototype = {
     request({url: fhem_url}, function(err, response, body) {
 
       if (!err && response.statusCode == 200) {
-        this.currentValue['On'] = powerOn;
+        this.currentValue.On = powerOn;
         callback();
         //this.log("State change complete.");
       }
@@ -253,7 +253,7 @@ FhemSwitch.prototype = {
   },
   
   /**
-  * Service and Characteristics
+  * Services and Characteristics
   */
   
   getServices: function() {
@@ -268,11 +268,11 @@ FhemSwitch.prototype = {
         
     var FhemSwitchService = new Service.Switch();
     
-    this.Characteristic['On'] = FhemSwitchService
+    this.Characteristic.On = FhemSwitchService
       .getCharacteristic(Characteristic.On)
       .on('get', this.getPowerState.bind(this))
       .on('set', this.setPowerState.bind(this));
-    this.currentValue['On'] = false;
+    this.currentValue.On = false;
       
     return [informationService, FhemSwitchService];
   }
