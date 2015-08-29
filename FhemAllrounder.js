@@ -206,6 +206,11 @@ FhemAllrounder.prototype = {
        
     var state = "";
     
+    if (boolvalue == this.currentValue.On) {
+      callback();
+      return;
+    }
+    
     switch (boolvalue) {
       case 0:
       case false:       state = 'off'; break;
