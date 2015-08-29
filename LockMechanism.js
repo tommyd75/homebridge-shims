@@ -33,11 +33,34 @@ function LockMechanism(log, config) {
   this.log = log;
   this.name = config["name"];
   
+  this.Characteristic = {};
   this.currentValue = {};
 }
 
 LockMechanism.prototype = {
 
+  /**
+  * Lock Simulation
+  */
+  
+  setLockCurrentState: function(value) {
+  
+    if(this.timeoutObj) {
+      clearTimeout(this.timeoutObj);
+    }
+    
+    this.timeoutObj = setTimeout(function() {
+      // 0: Unlocked (unsecured), 1: Locked (secured), 2: Jammed, 3: unknown
+      // Simulation: after 2 seconds this.currentValue.LockCurrentState is set to this.currentValue.LockTargetState
+      switch (value) {
+        case 'unlock':  this.currentValue.LockCurrentState = 0; break;
+        case 'lock':    this.currentValue.LockCurrentState = 1; break;
+        default:
+      }
+      this.Characteristic.LockCurrentState.setValue(this.currentValue.LockCurrentState);
+    }.bind(this), 1500);
+  },
+  
   /**
   * Characteristic.LockCurrentState
   */
@@ -48,6 +71,7 @@ LockMechanism.prototype = {
     
     // comment callback and uncomment your code
     callback(null, this.currentValue.LockTargetState);
+    
     
     /* your code
     request('http://192.168.0.100/jsonapi.asp?action=getdevice&id=Z2', function (error, resp, body) {
@@ -100,8 +124,10 @@ LockMechanism.prototype = {
       default:  
     }
     
-    // comment callback and uncomment your code
+    // comment setLockCurrentState and callback and uncomment your code
+    this.setLockCurrentState(target);
     callback();
+    
     
     /* your code
     this.log( "Rear door set to: " + target );
@@ -135,11 +161,11 @@ LockMechanism.prototype = {
         
     var LockMechanismService = new Service.LockMechanism();
     
-    LockMechanismService
+    this.Characteristic.LockCurrentState = LockMechanismService
       .getCharacteristic(Characteristic.LockCurrentState)
       .on('get', this.getLockCurrentState.bind(this));
 
-    LockMechanismService
+    this.Characteristic.LockTargetState = LockMechanismService
       .getCharacteristic(Characteristic.LockTargetState)
       .on('get', this.getLockTargetState.bind(this))
       .on('set', this.setLockTargetState.bind(this));
