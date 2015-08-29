@@ -1,0 +1,63 @@
+{ 
+    "global": {
+        "url": "127.0.0.1",
+        "port": "8083"
+    },
+        
+    "bridge": {
+        "name": "Homebridge",
+        "username": "CC:22:3D:E6:CE:27",
+        "port": 51826,
+        "pin": "031-45-154"
+    },
+    
+    "platforms": [
+    ],               
+
+    "accessories": [
+        {
+            "accessory": "LockMechanism",
+            "name": "LockMechanism"
+        },
+        {
+            "accessory": "FhemOutlet",
+            "name": "flex_lamp"
+        },
+        {
+            "accessory": "FhemSwitch",
+            "name": "dining_floorlamp"
+        },
+        {
+            "accessory": "FhemLightbulb",
+            "name": "led_bulb"
+        },
+        {
+            "accessory": "FhemTemperatureSensor",
+            "name": "local_weather"
+        },
+        {
+            "accessory": "FhemTemperatureSensor",
+            "name": "temp_office"
+        },
+        {
+            "accessory": "FhemTemperatureSensor",
+            "name": "temp_dad"
+        },
+        {
+            "accessory": "FhemTemperatureSensor",
+            "name": "temp_dining"
+        },
+        {
+            "accessory": "FhemTemperatureSensor",
+            "name": "temp_sanctum"
+        },
+        {
+            "accessory": "FhemAllrounder",
+            "name": "garden_blind"
+        },
+        {
+            "accessory": "FhemAllrounder",
+            "name": "bathroom_blind"
+        }
+    ]
+}
