@@ -19,11 +19,11 @@
                           
     "accessories": [
         {
-            "accessory": "FhemSwitch",
+            "accessory": "FhemOutlet",
             "name": "flex_lamp"
         },
         {
-            "accessory": "FhemSwitch",
+            "accessory": "FhemOutlet",
             "name": "dining_floorlamp"
         }
     ]                      
@@ -38,7 +38,7 @@ var fs = require('fs');
 var path = require('path');
 
 module.exports = {
-  accessory: FhemSwitch
+  accessory: FhemOutlet
 }
 
 'use strict';
@@ -52,7 +52,7 @@ var base_url = 'http://' + url + ':' + port;
 //console.log("base_url " + base_url);
 
 
-function FhemSwitch(log, config) {
+function FhemOutlet(log, config) {
   this.log = log;
   this.name = config["name"];
   this.base_url = base_url;
@@ -65,7 +65,7 @@ function FhemSwitch(log, config) {
   this.startLongpoll();
 }
 
-FhemSwitch.prototype = {
+FhemOutlet.prototype = {
 
   /**
   * FHEM Longpoll
@@ -118,7 +118,7 @@ FhemSwitch.prototype = {
             case 'off': fhemvalue = false; break;
           }
           
-          if(fhemvalue != this.currentValue.On) {
+          if(fhemvalue != this.currentValue.On) { 
             //this.log( 'fhemvalue: ' + fhemvalue);
             this.currentValue.On = fhemvalue;        
             this.Characteristic.On.setValue(fhemvalue);
@@ -225,6 +225,18 @@ FhemSwitch.prototype = {
   },
   
   /**
+  * Characteristic.OutletInUse
+  */
+
+  getOutletInUse: function(callback) {
+    
+    this.log('getOutletInUse');
+    callback(null,this.currentValue['OutletInUse']);   // true/false
+  },
+  
+  setOutletInUse: null, // N/A
+    
+  /**
   * Accessory Information Identify 
   */
   
@@ -266,14 +278,19 @@ FhemSwitch.prototype = {
       .setCharacteristic(Characteristic.SerialNumber, "FHEM Serial Number")
       .setCharacteristic(Characteristic.Name, this.name);
         
-    var FhemSwitchService = new Service.Switch();
+    var FhemOutletService = new Service.Outlet();
     
-    this.Characteristic.On = FhemSwitchService
+    this.Characteristic.On = FhemOutletService
       .getCharacteristic(Characteristic.On)
       .on('get', this.getPowerState.bind(this))
       .on('set', this.setPowerState.bind(this));
     this.currentValue.On = false;
+    
+    this.Characteristic['OutletInUse'] = FhemOutletService
+      .getCharacteristic(Characteristic.OutletInUse)
+      .on('get', this.getOutletInUse.bind(this));
+    this.currentValue['OutletInUse'] = true;
       
-    return [informationService, FhemSwitchService];
+    return [informationService, FhemOutletService];
   }
 };

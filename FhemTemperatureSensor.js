@@ -2,29 +2,29 @@
 // Copy this file into the folder: homebridge/accessories
 
 /* config.json Example:
-{   
+{
     "global": {
         "url": "127.0.0.1",
         "port": "8083"
     },
-        
+    
     "bridge": {
         "name": "Homebridge",
         "username": "CC:22:3D:E3:CE:27",
         "port": 51826,
         "pin": "031-45-154"
     },
-
+    
     "platforms": [],                        
-                          
+    
     "accessories": [
         {
-            "accessory": "FhemSwitch",
-            "name": "flex_lamp"
+            "accessory": "FhemTemperatureSensor",
+            "name": "temp_office"
         },
         {
-            "accessory": "FhemSwitch",
-            "name": "dining_floorlamp"
+            "accessory": "FhemTemperatureSensor",
+            "name": "local_weather"
         }
     ]                      
 }
@@ -38,34 +38,33 @@ var fs = require('fs');
 var path = require('path');
 
 module.exports = {
-  accessory: FhemSwitch
+  accessory: FhemTemperatureSensor
 }
 
 'use strict';
 
-// Load url
+// Load fhem-url
 var configPath = path.join(__dirname, "../config.json");
 var config = JSON.parse(fs.readFileSync(configPath));
 var url = config.global.url;
 var port = config.global.port;
 var base_url = 'http://' + url + ':' + port;
-//console.log("base_url " + base_url);
 
 
-function FhemSwitch(log, config) {
+function FhemTemperatureSensor(log, config) {
   this.log = log;
   this.name = config["name"];
   this.base_url = base_url;
   this.connection = { 'base_url': this.base_url, 'request': request };
-
+  
   this.Characteristic = {};
   this.currentValue = {};
-
+  
   this.longpoll_running = false;
   this.startLongpoll();
 }
 
-FhemSwitch.prototype = {
+FhemTemperatureSensor.prototype = {
 
   /**
   * FHEM Longpoll
@@ -88,7 +87,7 @@ FhemSwitch.prototype = {
     var datastr = "";
     
     this.connection.request.get( { url: url } ).on( 'data', function(data) {
-      //this.log( 'data: >'+ data + '<');
+      //this.log( 'data:\n'+ data);
       if( !data ) 
         return;
 
@@ -111,19 +110,17 @@ FhemSwitch.prototype = {
         //this.log("dataset: " + dataset);
         //this.log('dataobj: ' + dataobj[0] + ', ' + dataobj[1]);
         
+        var reading = this.name + '-temperature';
         var fhemvalue;
-        if (dataobj[0] == this.name) {
-          switch (dataobj[1]) {
-            case 'on':  fhemvalue = true; break;
-            case 'off': fhemvalue = false; break;
-          }
-          
-          if(fhemvalue != this.currentValue.On) {
+        
+        if (dataobj[0] == this.name || dataobj[0] == reading) {
+          fhemvalue = parseFloat(dataobj[1].match(/[+-]?\d*\.?\d+/));
+          if(fhemvalue != this.currentValue.CurrentTemperature) {
+            this.currentValue.CurrentTemperature = fhemvalue;      
+            this.Characteristic.CurrentTemperature.setValue(fhemvalue);
             //this.log( 'fhemvalue: ' + fhemvalue);
-            this.currentValue.On = fhemvalue;        
-            this.Characteristic.On.setValue(fhemvalue);
           }
-        }
+        } 
       }
       
       datastr = datastr.substr(offset);
@@ -142,35 +139,23 @@ FhemSwitch.prototype = {
       setTimeout( function(){this.startLongpoll()}.bind(this), 5000 );
     }.bind(this) );
   },
-      
+
   /**
-  * Characteristic.On
+  * Characteristic.CurrentTemperature
   */
   
-  getPowerState: function(callback) {
+  getCurrentTemperature: function(callback) {
     
-    //this.log("Getting current state...");
-    var cmd = '{ReadingsVal("' + this.name + '","state","")}';
+    //this.log("Getting current temperature ...");
+    var cmd = '{ReadingsVal("' + this.name + '","temperature","")}';
     var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';
 
     request.get({url: fhem_url}, function(err, response, body) {
-      //this.log('body: ' + body);
+      
       if (!err && response.statusCode == 200) {
-        var state = body.trim();
-        if (state.match(/^[A-D]./))  // EnOcean
-          state = state.slice(1,2);
-        
-        //this.log('getPowerState: >' + state + '<');
-                
-        switch (state) {
-          case  '0':
-          case  'off':   this.currentValue.On = false; break;
-          case  'I':
-          case  '1':
-          case  'on':    this.currentValue.On = true; break;
-          default:      // nothing
-        }
-        callback(null, this.currentValue.On);
+        this.currentValue.CurrentTemperature = parseFloat(body.trim());
+        //this.log('temperature: ' + this.currentValue.CurrentTemperature);
+        callback(null, this.currentValue.CurrentTemperature);
       } 
       else {
         callback(err);
@@ -181,75 +166,15 @@ FhemSwitch.prototype = {
     }.bind(this));
   },
   
-  setPowerState: function(boolvalue, callback) {
-    
-    //this.log("setPowerState: " + boolvalue);
-    if (boolvalue == this.currentValue.On) {
-      callback();
-      return;
-    }
-    
-    var state = "";
-    
-    switch (boolvalue) {
-      case 0:
-      case false:       state = 'off'; break;
-      case 1:
-      case true:        state = 'on';  break; 
-      default:          
-        this.log("setPowerState: state undefined! boolvalue: >" + boolvalue + "<");
-        callback();
-        return;
-    }
-    
-    var cmd = 'set ' + this.name + ' ' + state;
-    //this.log("cmd: " + cmd);
-    
-    var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';    
-    //this.log(fhem_url);
-        
-    request({url: fhem_url}, function(err, response, body) {
-
-      if (!err && response.statusCode == 200) {
-        this.currentValue.On = boolvalue;
-        callback();
-        //this.log("State change complete.");
-      }
-      else {
-        callback(err)
-        this.log(err);
-        if(response)
-          this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
-      }
-    }.bind(this));
-  },
+  setCurrentTemperature: null, // N/A
   
   /**
   * Accessory Information Identify 
   */
   
   identify: function(callback) {
-    //this.log("Identify requested!");
-    
-    var cmd = 'set ' + this.name + ' ' + 'on-for-timer 2';
-    //this.log("cmd: " + cmd);
-    
-    var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';    
-    //this.log(fhem_url);
-        
-    request({url: fhem_url}, function(err, response, body) {
-
-      if (!err && response.statusCode == 200) {
-        callback();
-        //this.log("State change complete.");
-      } 
-      else {
-        this.log(err);
-        callback(err)
-        if(response)
-          this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
-      }
-    }.bind(this));
+    this.log("Identify requested!");
+    callback();
   },
   
   /**
@@ -257,7 +182,7 @@ FhemSwitch.prototype = {
   */
   
   getServices: function() {
-    
+  
     var informationService = new Service.AccessoryInformation();
     
     informationService
@@ -265,15 +190,14 @@ FhemSwitch.prototype = {
       .setCharacteristic(Characteristic.Model, "FHEM Model")
       .setCharacteristic(Characteristic.SerialNumber, "FHEM Serial Number")
       .setCharacteristic(Characteristic.Name, this.name);
-        
-    var FhemSwitchService = new Service.Switch();
-    
-    this.Characteristic.On = FhemSwitchService
-      .getCharacteristic(Characteristic.On)
-      .on('get', this.getPowerState.bind(this))
-      .on('set', this.setPowerState.bind(this));
-    this.currentValue.On = false;
       
-    return [informationService, FhemSwitchService];
+    var FhemTemperatureSensorService = new Service.TemperatureSensor();
+    
+    this.Characteristic.CurrentTemperature = FhemTemperatureSensorService
+      .getCharacteristic(Characteristic.CurrentTemperature)
+      .on('get', this.getCurrentTemperature.bind(this));
+    this.currentValue.CurrentTemperature = 0;
+    
+    return [informationService, FhemTemperatureSensorService];
   }
 };
