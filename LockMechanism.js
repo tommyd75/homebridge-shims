@@ -51,7 +51,7 @@ LockMechanism.prototype = {
     
     this.timeoutObj = setTimeout(function() {
       // 0: Unlocked (unsecured), 1: Locked (secured), 2: Jammed, 3: unknown
-      // Simulation: after 2 seconds this.currentValue.LockCurrentState is set to this.currentValue.LockTargetState
+      // Simulation: after 1.5 seconds this.currentValue.LockCurrentState is set to this.currentValue.LockTargetState
       switch (value) {
         case 'unlock':  this.currentValue.LockCurrentState = 0; break;
         case 'lock':    this.currentValue.LockCurrentState = 1; break;
@@ -110,7 +110,6 @@ LockMechanism.prototype = {
     */ // your code end
   },
   
-  
   setLockTargetState: function(lock, callback) {
 
     this.log('setLockTargetState: ' + lock);
@@ -127,7 +126,6 @@ LockMechanism.prototype = {
     // comment setLockCurrentState and callback and uncomment your code
     this.setLockCurrentState(target);
     callback();
-    
     
     /* your code
     this.log( "Rear door set to: " + target );
