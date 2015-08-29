@@ -70,7 +70,7 @@ LockMechanism.prototype = {
     this.log('getLockCurrentState');
     
     // comment callback and uncomment your code
-    callback(null, this.currentValue.LockTargetState);
+    callback(null, this.currentValue.LockCurrentState);
     
     
     /* your code
@@ -110,6 +110,7 @@ LockMechanism.prototype = {
     */ // your code end
   },
   
+  
   setLockTargetState: function(lock, callback) {
 
     this.log('setLockTargetState: ' + lock);
@@ -126,6 +127,7 @@ LockMechanism.prototype = {
     // comment setLockCurrentState and callback and uncomment your code
     this.setLockCurrentState(target);
     callback();
+    
     
     /* your code
     this.log( "Rear door set to: " + target );
@@ -162,12 +164,12 @@ LockMechanism.prototype = {
     this.Characteristic.LockCurrentState = LockMechanismService
       .getCharacteristic(Characteristic.LockCurrentState)
       .on('get', this.getLockCurrentState.bind(this));
+    this.currentValue.LockCurrentState = 0;
 
     this.Characteristic.LockTargetState = LockMechanismService
       .getCharacteristic(Characteristic.LockTargetState)
       .on('get', this.getLockTargetState.bind(this))
       .on('set', this.setLockTargetState.bind(this));
-      
     this.currentValue.LockTargetState = false;
       
     return [informationService, LockMechanismService];
