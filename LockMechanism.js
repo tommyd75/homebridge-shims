@@ -167,7 +167,7 @@ LockMechanism.prototype = {
       .getCharacteristic(Characteristic.LockTargetState)
       .on('get', this.getLockTargetState.bind(this))
       .on('set', this.setLockTargetState.bind(this));
-    this.currentValue.LockTargetState = Characteristic.LockTargetState.UNSECURED
+    this.currentValue.LockTargetState = Characteristic.LockTargetState.UNSECURED;
       
     return [informationService, LockMechanismService];
   }
