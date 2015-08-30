@@ -40,7 +40,7 @@ function LockMechanism(log, config) {
 LockMechanism.prototype = {
 
   /**
-  * Lock Simulation
+  * Hardware Lock Simulation
   */
   
   setLockCurrentState: function(value) {
@@ -50,11 +50,10 @@ LockMechanism.prototype = {
     }
     
     this.timeoutObj = setTimeout(function() {
-      // 0: Unlocked (unsecured), 1: Locked (secured), 2: Jammed, 3: unknown
       // Simulation: after 1.5 seconds this.currentValue.LockCurrentState is set to this.currentValue.LockTargetState
       switch (value) {
-        case 'unlock':  this.currentValue.LockCurrentState = 0; break;
-        case 'lock':    this.currentValue.LockCurrentState = 1; break;
+        case 'unlock':  this.currentValue.LockCurrentState = Characteristic.LockTargetState.UNSECURED; break;
+        case 'lock':    this.currentValue.LockCurrentState = Characteristic.LockTargetState.SECURED; break;
         default:
       }
       this.Characteristic.LockCurrentState.setValue(this.currentValue.LockCurrentState);
@@ -111,16 +110,14 @@ LockMechanism.prototype = {
   },
   
   
-  setLockTargetState: function(lock, callback) {
+  setLockTargetState: function(value, callback) {
 
-    this.log('setLockTargetState: ' + lock);
-    this.currentValue.LockTargetState = lock;
+    this.log('setLockTargetState: ' + value);
+    this.currentValue.LockTargetState = value;
     
-    switch (lock) {
-      case 0:
-      case false:  target = 'unlock'; break;
-      case 1:
-      case true:   target = 'lock';  break; 
+    switch (value) {
+      case Characteristic.LockTargetState.UNSECURED: target = 'unlock'; break;
+      case Characteristic.LockTargetState.SECURED: target = 'lock';  break
       default:  
     }
     
@@ -164,13 +161,13 @@ LockMechanism.prototype = {
     this.Characteristic.LockCurrentState = LockMechanismService
       .getCharacteristic(Characteristic.LockCurrentState)
       .on('get', this.getLockCurrentState.bind(this));
-    this.currentValue.LockCurrentState = 0;
+    this.currentValue.LockCurrentState = Characteristic.LockCurrentState.UNSECURED;
 
     this.Characteristic.LockTargetState = LockMechanismService
       .getCharacteristic(Characteristic.LockTargetState)
       .on('get', this.getLockTargetState.bind(this))
       .on('set', this.setLockTargetState.bind(this));
-    this.currentValue.LockTargetState = false;
+    this.currentValue.LockTargetState = Characteristic.LockTargetState.UNSECURED
       
     return [informationService, LockMechanismService];
   }
