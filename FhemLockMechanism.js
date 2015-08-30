@@ -118,8 +118,8 @@ FhemLockMechanism.prototype = {
           case (this.name):
           
             switch(dataobj[1]) {
-              case 'on':  fhemvalue = true; break;
-              case 'off': fhemvalue = false; break;
+              case 'on':  fhemvalue = Characteristic.LockTargetState.SECURED; break;
+              case 'off': fhemvalue = Characteristic.LockTargetState.UNSECURED; break;
             }            
             //this.log( 'Fhem onoff: ' + fhemvalue);
             
@@ -130,8 +130,14 @@ FhemLockMechanism.prototype = {
             break;
             
           case (this.name + '-currentState'):
-            fhemvalue = parseInt(dataobj[1].match(/\d+/));
-            //this.log("Fhem dim: " + fhemvalue);
+          
+            switch( parseInt(dataobj[1].match(/\d+/)) ) {
+              case 0:   fhemvalue = Characteristic.LockCurrentState.UNSECURED; break;
+              case 1:   fhemvalue = Characteristic.LockCurrentState.SECURED; break;
+              case 2:   fhemvalue = Characteristic.LockCurrentState.JAMMED; break;
+              case 3:   fhemvalue = Characteristic.LockCurrentState.UNKNOWN; break;
+              default:  fhemvalue = Characteristic.LockCurrentState.UNKNOWN;
+            }  
             
             if(fhemvalue != this.currentValue.LockCurrentState) { 
               this.currentValue.LockCurrentState = fhemvalue;
@@ -176,7 +182,13 @@ FhemLockMechanism.prototype = {
         var state = parseInt(body.trim());
         
         //this.log('getLockCurrentState: >' + state + '<');
-        this.currentValue.LockCurrentState = state;   // 0: Unlocked (unsecured), 1: Locked (secured), 2: Jammed, 3: unknown
+        switch(state) {
+          case 0:   this.currentValue.LockCurrentState = Characteristic.LockCurrentState.UNSECURED; break;
+          case 1:   this.currentValue.LockCurrentState = Characteristic.LockCurrentState.SECURED; break;
+          case 2:   this.currentValue.LockCurrentState = Characteristic.LockCurrentState.JAMMED; break;
+          case 3:   this.currentValue.LockCurrentState = Characteristic.LockCurrentState.UNKNOWN; break;
+          default:  this.currentValue.LockCurrentState = Characteristic.LockCurrentState.UNKNOWN;
+        }  
         callback(null, this.currentValue.LockCurrentState);
       } 
       else {
@@ -213,10 +225,10 @@ FhemLockMechanism.prototype = {
                 
         switch (state) {
           case  '0':
-          case  'off':   this.currentValue.LockTargetState = false; break;
+          case  'off':   this.currentValue.LockTargetState = Characteristic.LockTargetState.UNSECURED; break;
           case  'I':
           case  '1':
-          case  'on':    this.currentValue.LockTargetState = true; break;
+          case  'on':    this.currentValue.LockTargetState = Characteristic.LockTargetState.SECURED; break;
           default:      // nothing
         }
         callback(null, this.currentValue.LockTargetState);
@@ -302,13 +314,13 @@ FhemLockMechanism.prototype = {
     this.Characteristic.LockCurrentState = FhemLockMechanismService
       .getCharacteristic(Characteristic.LockCurrentState)
       .on('get', this.getLockCurrentState.bind(this));
-    this.currentValue.LockCurrentState = false;
+    this.currentValue.LockCurrentState = Characteristic.LockCurrentState.UNSECURED;
 
     this.Characteristic.LockTargetState = FhemLockMechanismService
       .getCharacteristic(Characteristic.LockTargetState)
       .on('get', this.getLockTargetState.bind(this))
       .on('set', this.setLockTargetState.bind(this));
-    this.currentValue.LockTargetState = false;
+    this.currentValue.LockTargetState = Characteristic.LockTargetState.UNSECURED;
     
     return [informationService, FhemLockMechanismService];
   }
