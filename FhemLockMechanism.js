@@ -218,19 +218,14 @@ FhemLockMechanism.prototype = {
       //this.log('body: ' + body);
       if (!err && response.statusCode == 200) {
         var state = body.trim();
-        if (state.match(/^[A-D]./))  // EnOcean
-          state = state.slice(1,2);
         
         //this.log('getLockCurrentState: >' + state + '<');
                 
-        switch (state) {
-          case  '0':
-          case  'off':   this.currentValue.LockTargetState = Characteristic.LockTargetState.UNSECURED; break;
-          case  'I':
-          case  '1':
-          case  'on':    this.currentValue.LockTargetState = Characteristic.LockTargetState.SECURED; break;
-          default:      // nothing
-        }
+        switch(state) {
+          case 'off':   this.currentValue.LockTargetState = Characteristic.LockTargetState.UNSECURED; break;
+          case 'on':   this.currentValue.LockTargetState = Characteristic.LockTargetState.SECURED; break;
+          default:  
+        }  
         callback(null, this.currentValue.LockTargetState);
       } 
       else {
@@ -243,25 +238,23 @@ FhemLockMechanism.prototype = {
   },
   
   
-  setLockTargetState: function(boolvalue, callback) {
+  setLockTargetState: function(value, callback) {
 
-    //this.log('setLockTargetState: ' + boolvalue);
-    if (boolvalue == this.currentValue.LockTargetState) {
+    //this.log('setLockTargetState: ' + value);
+    if (value == this.currentValue.LockTargetState) {
       callback();
       return;
     }
     
     var state = "";
     
-    switch (boolvalue) {
-      case 0:
-      case false:       state = 'off'; break;
-      case 1:
-      case true:        state = 'on';  break; 
+    switch (value) {
+      case Characteristic.LockTargetState.UNSECURED: state = 'off'; break;
+      case Characteristic.LockTargetState.SECURED: state = 'on';  break
       default:          
-        this.log("setPowerState: state undefined! boolvalue: >" + boolvalue + "<");
+        this.log("setPowerState: state undefined! value: >" + value + "<");
         callback();
-        return;
+        return; 
     }
     
     var cmd = 'set ' + this.name + ' ' + state;
@@ -273,7 +266,7 @@ FhemLockMechanism.prototype = {
     request({url: fhem_url}, function(err, response, body) {
 
       if (!err && response.statusCode == 200) {
-        this.currentValue.LockTargetState = boolvalue;
+        this.currentValue.LockTargetState = value;
         callback();
         //this.log("setLockTargetState: " + this.currentValue.LockTargetState);
       }
