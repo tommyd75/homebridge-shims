@@ -6,8 +6,8 @@
 //
 // attr led_bulb userReadings onoff {ReadingsVal("led_bulb","state","") =~/^on|^off/?
 // ReadingsVal("led_bulb","state",""):ReadingsVal("led_bulb","onoff","")},dim {ReadingsVal("led_bulb","state","") 
-// =~"dim"?ReadingsNum("led_bulb","state",""):ReadingsVal("led_bulb","dim","")},rgb 
-// {ReadingsVal("led_bulb","state","") =~"rgb"?substr(ReadingsVal("led_bulb","state",""),
+// =~/^dim/?ReadingsNum("led_bulb","state",""):ReadingsVal("led_bulb","dim","")},rgb 
+// {ReadingsVal("led_bulb","state","") =~/^rgb/?substr(ReadingsVal("led_bulb","state",""),
 // 4):ReadingsVal("led_bulb","rgb","")}
 
 
