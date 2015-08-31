@@ -93,6 +93,7 @@ LockMechanism.prototype = {
   getLockTargetState: function(callback) {
   
     this.log('getLockTargetState');
+    // comment callback and uncomment your code
     callback(null, this.currentValue.LockTargetState);
     
     /* your code    
@@ -129,6 +130,7 @@ LockMechanism.prototype = {
     /* your code
     this.log( "Rear door set to: " + target );
     request("http://192.168.0.100/tenHsServer/tenHsServer.aspx?t=ab&f=RunEvent&d="+target);
+    // todo error handling
     callback();
     */ // your code end
   },
