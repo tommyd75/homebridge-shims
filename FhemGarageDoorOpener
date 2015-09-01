@@ -234,7 +234,7 @@ FhemGarageDoorOpener.prototype = {
         //this.log('getCurrentDoorState: >' + state + '<');
                 
         switch(state) {
-          case 'off':   this.currentValue.TargetDoorState = Characteristic.TargetDoorState.OPEN; break;
+          case 'off':  this.currentValue.TargetDoorState = Characteristic.TargetDoorState.OPEN; break;
           case 'on':   this.currentValue.TargetDoorState = Characteristic.TargetDoorState.CLOSED; break;
           default:  
         }  
@@ -355,12 +355,23 @@ FhemGarageDoorOpener.prototype = {
     this.Characteristic.CurrentDoorState = FhemGarageDoorOpenerService
       .getCharacteristic(Characteristic.CurrentDoorState)
       .on('get', this.getCurrentDoorState.bind(this));
+    
+    // The value property of CurrentDoorState must be one of the following:
+    // Characteristic.CurrentDoorState.OPEN = 0;
+    // Characteristic.CurrentDoorState.CLOSED = 1;
+    // Characteristic.CurrentDoorState.OPENING = 2;
+    // Characteristic.CurrentDoorState.CLOSING = 3;
+    // Characteristic.CurrentDoorState.STOPPED = 4;
     this.currentValue.CurrentDoorState = Characteristic.CurrentDoorState.OPEN;
 
     this.Characteristic.TargetDoorState = FhemGarageDoorOpenerService
       .getCharacteristic(Characteristic.TargetDoorState)
       .on('get', this.getTargetDoorState.bind(this))
       .on('set', this.setTargetDoorState.bind(this));
+      
+    // The value property of TargetDoorState must be one of the following:
+    // Characteristic.TargetDoorState.OPEN = 0;
+    // Characteristic.TargetDoorState.CLOSED = 1;
     this.currentValue.TargetDoorState = Characteristic.TargetDoorState.OPEN;
     
     this.Characteristic.ObstructionDetected = FhemGarageDoorOpenerService
