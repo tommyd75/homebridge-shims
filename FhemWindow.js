@@ -51,19 +51,14 @@ var port = config.global.port;
 var base_url = 'http://' + url + ':' + port;
 //console.log("base_url " + base_url);
 
-
 function FhemWindow(log, config) {
   this.log = log;
   this.name = config["name"];
   this.base_url = base_url;
   this.connection = { 'base_url': this.base_url, 'request': request };
-
-  this.CurPos = 0;
-  this.TarPos = 0;
-  this.OpeSta = 0;  
-  this.currentValue = false;
   
   this.currentCharacteristic = {};
+  this.currentValue = {};
 
 
   this.longpoll_running = false;
@@ -72,6 +67,10 @@ function FhemWindow(log, config) {
 
 FhemWindow.prototype = {
 
+  /**
+  * FHEM Longpoll
+  */
+  
   startLongpoll: function() {
   
     if( this.longpoll_running )
@@ -83,7 +82,7 @@ FhemWindow.prototype = {
     var query = "/fhem.pl?XHR=1&inform=type=status;filter=" + this.name + ";since=" + since + 
     ";fmt=JSON&timestamp=" + Date.now();
     var url = encodeURI( this.connection.base_url + query );
-    this.log( 'starting longpoll: ' + url );
+    //this.log( 'starting longpoll: ' + url );
 
     var offset = 0;
     var datastr = "";
@@ -109,36 +108,48 @@ FhemWindow.prototype = {
         
         var dataobj = JSON.parse(dataset);
         
-        var fhemvalue = dataobj[1];
+        var fhemvalue;
         
         //this.log("dataset: " + dataset);
         //this.log('dataobj: ' + dataobj[0] + ', ' + dataobj[1]);
        
         switch (dataobj[0]) {
-        
-          case (this.name + '-onoff'):
-          
-            switch(fhemvalue) {
-              case 'on':
-                this.currentValue = true;
-                //this.currentCharacteristic['PowerState'].setValue(true);
-                break;
-                
-              case 'off':
-                this.currentValue = false;
-                //this.currentCharacteristic['PowerState'].setValue(false);
-                break;
-                
-              default: // nothing
+           
+          case (this.name):
+            fhemvalue = parseInt(dataobj[1].match(/\d+/));
+            
+            if(fhemvalue != this.currentValue.TargetPosition) { 
+              //this.log( 'fhemvalue: ' + fhemvalue);
+              this.currentValue.TargetPosition = fhemvalue;        
+              this.currentCharacteristic.TargetPosition.setValue(fhemvalue);
             }
             break;
-          
-          case (this.name + '-pct'):
-            this.CurPos = parseInt(fhemvalue.match(/\d+/));
-            this.log("pct: " + this.CurPos);
-            this.currentCharacteristic['CurPos'].setValue(this.CurPos);
-
+            
+          case (this.name + '-PositionState'):
+            switch( parseInt(dataobj[1].match(/\d+/)) ) {
+              case 0:   fhemvalue = Characteristic.PositionState.DECREASING; break;
+              case 1:   fhemvalue = Characteristic.PositionState.INCREASING; break;
+              case 2:   fhemvalue = Characteristic.PositionState.STOPPED; break;
+              default:  // nothing
+            }  
+            
+            if(fhemvalue != this.currentValue.PositionState) { 
+              this.currentValue.PositionState = fhemvalue;
+              this.Characteristic.PositionState.setValue(fhemvalue);
+            }
             break;
+            
+            case (this.name + '-currentPosition'):
+            fhemvalue = parseInt(dataobj[1].match(/\d+/));
+            
+            if(fhemvalue != this.currentValue.CurrentPosition) { 
+              //this.log( 'fhemvalue: ' + fhemvalue);
+              this.currentValue.CurrentPosition = fhemvalue;        
+              this.currentCharacteristic.CurrentPosition.setValue(fhemvalue);
+            }
+            break;
+            
+            
           default: // nothing
         }
       }
@@ -159,95 +170,23 @@ FhemWindow.prototype = {
       setTimeout( function(){this.startLongpoll()}.bind(this), 5000 );
     }.bind(this) );
   },
-    
-  getPowerState: function(callback) {
-    
-    //this.log("Getting current state...");
-    var cmd = '{ReadingsVal("' + this.name + '","state","")}';
-    var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';
-
-    request.get({url: fhem_url}, function(err, response, body) {
-      //this.log('body: ' + body);
-      if (!err && response.statusCode == 200) {
-        var state = body.trim();
-        if (state.match(/^[A-D]./))  // EnOcean
-          state = state.slice(1,2);
-        
-        //this.log('getPowerState: >' + state + '<');
-                
-        switch (state) {
-          case  '0':
-          case  'off':   this.currentValue = false; break;
-          case  'I':
-          case  '1':
-          case  'on':    this.currentValue = true; break;
-          default:      // nothing
-        }
-        callback(null, this.currentValue);
-      } 
-      else {
-        callback(err);
-        this.log(err);
-        if(response)
-          this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
-      }
-    }.bind(this));
-  },
   
-  setPowerState: function(powerOn, callback) {
-    
-    //this.log("setPowerState: " + powerOn);
-    if (powerOn == this.currentValue) {
-      callback();
-      return;
-    }
-    
-    var state = "";
-    
-    switch (powerOn) {
-      case 0:
-      case false:       state = 'off'; break;
-      case 1:
-      case true:        state = 'on';  break; 
-      default:          
-        this.log("setPowerState: state undefined! powerOn: >" + powerOn + "<");
-        callback();
-        return;
-    }
-    
-    var cmd = 'set ' + this.name + ' ' + state;
-    //this.log("cmd: " + cmd);
-    
-    var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';    
-    //this.log(fhem_url);
-        
-    request({url: fhem_url}, function(err, response, body) {
-
-      if (!err && response.statusCode == 200) {
-        this.currentValue = powerOn;
-        callback();
-        //this.log("State change complete.");
-      } 
-      else {
-        callback(err)
-        this.log(err);
-        if(response)
-          this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
-      }
-    }.bind(this));
-  },
+  /**
+  * Characteristic.CurrentPosition
+  */
   
   getCurrentPosition: function(callback) {
   
-    var cmd = '{ReadingsVal("' + this.name + '","pct","")}';
+    var cmd = '{ReadingsVal("' + this.name + '","currentPosition","")}'; 
     var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';
     
     request.get({url: fhem_url}, function(err, response, body) {
       
       if (!err && response.statusCode == 200) {
-        this.CurPos = parseInt(body.trim());
-        this.log('getCurrentPosition: ' + this.CurPos);
-        callback(null, this.CurPos);
+        //this.log('body: ' + body);
+        this.currentValue.CurrentPosition = parseInt(body.trim());
+        //this.log('getCurrentPosition: ' + this.currentValue.CurrentPosition);
+        callback(null, this.currentValue.CurrentPosition);
         
       } 
       else {
@@ -261,17 +200,21 @@ FhemWindow.prototype = {
   
   setCurrentPosition: null, // N/A
   
+  /**
+  * Characteristic.TargetPosition
+  */
+  
   getTargetPosition: function(callback) {
   
-    var cmd = '{ReadingsVal("' + this.name + '","pct","")}';  // todo Target in ZWave ?
+    var cmd = '{ReadingsVal("' + this.name + '","state","")}'; 
     var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';
     
     request.get({url: fhem_url}, function(err, response, body) {
       
       if (!err && response.statusCode == 200) {
-        this.TarPos = parseInt(body.trim());
-        this.log('getTargetPosition: ' + this.TarPos);
-        callback(null, this.TarPos);
+        this.currentValue.TargetPosition = parseInt(body.trim());
+        //this.log('getTargetPosition: ' + this.currentValue.TargetPosition);
+        callback(null, this.currentValue.TargetPosition);
       } 
       else {
         callback(err);
@@ -281,42 +224,80 @@ FhemWindow.prototype = {
       }
     }.bind(this));
   },
- 
-  setTargetPosition: function(value) {
+  
+  setTargetPosition: function(value, callback) {
 
     this.log('setTargetPosition: ' + value);
     callback();
     
+    // todo  !!! issue: control grayed out
+    
     /*
-    var timer;
-    if(timer) {
-      clearTimeout(timer);
+    if(this.timeoutObj) {
+      clearTimeout(this.timeoutObj);
     }
     
     var cmd = 'set ' + this.name + ' dim ' + value;
     //this.log("cmd: " + cmd);
      
-    timer = setTimeout(function() { 
+    this.timeoutObj =  = setTimeout(function() { 
       clearTimeout(timer);
       this.sendCmd(cmd); 
       //this.log("setBrightness: " + value); 
     }.bind(this), delay);
     */
+    
   },
   
+  /**
+  * Characteristic.PositionState
+  */
     
   getPositionState: function(callback) {
-  
-    this.log('getPositionState');
-    callback(null,0); // todo 0,1,2
+      
+    var cmd = '{ReadingsVal("' + this.name + '","currentPosition","")}';
+    var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';
+
+    request.get({url: fhem_url}, function(err, response, body) {
+      //this.log('body: ' + body);
+      if (!err && response.statusCode == 200) {
+        var state = parseInt(body.trim());
+        
+        //this.log('getPositionState: ' + state);
+        switch(state) {
+          case 0:   this.currentValue.PositionState = Characteristic.PositionState.DECREASING; break;
+          case 1:   this.currentValue.PositionState = Characteristic.PositionState.INCREASING; break;
+          case 2:   this.currentValue.PositionState = Characteristic.PositionState.STOPPED; break;
+          default:  // nothing
+        }  
+        callback(null, this.currentValue.PositionState);
+      } 
+      else {
+        callback(err);
+        this.log(err);
+        if(response)
+          this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
+      }
+    }.bind(this));
+    
+    // todo
   },
   
-  setPositionState: function(value) {
+  setPositionState: null,  // N/S
   
-    this.log('setPositionState: ' + value);
+  /**
+  * Accessory Information Identify 
+  */
+  
+  identify: function(callback) {
+    this.log("Identify requested!");
     callback();
   },
   
+ /**
+ * Service "Window Covering"
+ */
+ 
   getServices: function() {
   
     var informationService = new Service.AccessoryInformation();
@@ -326,22 +307,31 @@ FhemWindow.prototype = {
       .setCharacteristic(Characteristic.Model, "FHEM Model")
       .setCharacteristic(Characteristic.SerialNumber, "FHEM Serial Number")
       .setCharacteristic(Characteristic.Name, this.name);
-  
+      
     var FhemWindowService = new Service.WindowCovering();
     
-    this.currentCharacteristic['CurPos'] = FhemWindowService
+    this.currentCharacteristic.CurrentPosition = FhemWindowService
       .getCharacteristic(Characteristic.CurrentPosition)
       .on('get', this.getCurrentPosition.bind(this));
-      
-    this.currentCharacteristic['TarPos'] = FhemWindowService
+    this.currentValue.CurrentPosition = 0;  // 0 .. 100
+
+    this.currentCharacteristic.TargetPosition = FhemWindowService
       .getCharacteristic(Characteristic.TargetPosition)
       .on('get', this.getTargetPosition.bind(this))
       .on('set', this.setTargetPosition.bind(this));
+    this.currentValue.TargetPosition = 0;  // 0 .. 100
       
-    this.currentCharacteristic['PosSta'] = FhemWindowService
+    this.currentCharacteristic.PositionState = FhemWindowService
       .getCharacteristic(Characteristic.PositionState)
-      .on('get', this.getPositionState.bind(this))
-      .on('set', this.setPositionState.bind(this));
+      .on('get', this.getPositionState.bind(this));
+      
+    // The value property of PositionState must be one of the following:
+    // Characteristic.PositionState.DECREASING = 0;
+    // Characteristic.PositionState.INCREASING = 1;
+    // Characteristic.PositionState.STOPPED = 2;
+    this.currentValue.PositionState = Characteristic.PositionState.STOPPED;
+    
+
       
     return [informationService, FhemWindowService];
   }
