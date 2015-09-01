@@ -115,27 +115,42 @@ FhemWindowCovering.prototype = {
         //this.log('dataobj: ' + dataobj[0] + ', ' + dataobj[1]);
        
         switch (dataobj[0]) {
-        
-          case (this.name + '-onoff'):
-          
-            switch(dataobj[1]) {
-              case 'on':  fhemvalue = true; break;
-              case 'off': fhemvalue = false; break;
-            }
+           
+          case (this.name):
+            fhemvalue = parseInt(dataobj[1].match(/\d+/));
             
-            if(fhemvalue != this.currentValue.On) { 
+            if(fhemvalue != this.currentValue.TargetPosition) { 
               //this.log( 'fhemvalue: ' + fhemvalue);
-              this.currentValue.On = fhemvalue;        
-              this.currentCharacteristic.On.setValue(fhemvalue);
+              this.currentValue.TargetPosition = fhemvalue;        
+              this.currentCharacteristic.TargetPosition.setValue(fhemvalue);
             }
             break;
-          
-          case (this.name + '-pct'):
-            this.currentValue.CurrentPosition = parseInt(dataobj[1].match(/\d+/));
-            //this.log("pct: " + this.currentValue.CurrentPosition);
-            this.currentCharacteristic.CurrentPosition.setValue(this.currentValue.CurrentPosition);
-
+            
+          case (this.name + '-PositionState'):
+            switch( parseInt(dataobj[1].match(/\d+/)) ) {
+              case 0:   fhemvalue = Characteristic.PositionState.DECREASING; break;
+              case 1:   fhemvalue = Characteristic.PositionState.INCREASING; break;
+              case 2:   fhemvalue = Characteristic.PositionState.STOPPED; break;
+              default:  // nothing
+            }  
+            
+            if(fhemvalue != this.currentValue.PositionState) { 
+              this.currentValue.PositionState = fhemvalue;
+              this.Characteristic.PositionState.setValue(fhemvalue);
+            }
             break;
+            
+            case (this.name + '-currentPosition'):
+            fhemvalue = parseInt(dataobj[1].match(/\d+/));
+            
+            if(fhemvalue != this.currentValue.CurrentPosition) { 
+              //this.log( 'fhemvalue: ' + fhemvalue);
+              this.currentValue.CurrentPosition = fhemvalue;        
+              this.currentCharacteristic.CurrentPosition.setValue(fhemvalue);
+            }
+            break;
+            
+            
           default: // nothing
         }
       }
@@ -158,100 +173,20 @@ FhemWindowCovering.prototype = {
   },
   
   /**
-  * Characteristic.On
-  */
-    
-  getPowerState: function(callback) {
-    
-    //this.log("Getting current state...");
-    var cmd = '{ReadingsVal("' + this.name + '","state","")}';
-    var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';
-
-    request.get({url: fhem_url}, function(err, response, body) {
-      //this.log('body: ' + body);
-      if (!err && response.statusCode == 200) {
-        var state = body.trim();
-        if (state.match(/^[A-D]./))  // EnOcean
-          state = state.slice(1,2);
-        
-        //this.log('getPowerState: >' + state + '<');
-                
-        switch (state) {
-          case  '0':
-          case  'off':   this.currentValue.On = false; break;
-          case  'I':
-          case  '1':
-          case  'on':    this.currentValue.On = true; break;
-          default:      // nothing
-        }
-        callback(null, this.currentValue.On);
-      } 
-      else {
-        callback(err);
-        this.log(err);
-        if(response)
-          this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
-      }
-    }.bind(this));
-  },
-  
-  setPowerState: function(boolvalue, callback) {
-    
-    //this.log("setPowerState: " + boolvalue);
-    if (boolvalue == this.currentValue.On) {
-      callback();
-      return;
-    }
-    
-    var state = "";
-    
-    switch (boolvalue) {
-      case 0:
-      case false:       state = 'off'; break;
-      case 1:
-      case true:        state = 'on';  break; 
-      default:          
-        this.log("setPowerState: state undefined! boolvalue: >" + boolvalue + "<");
-        callback();
-        return;
-    }
-    
-    var cmd = 'set ' + this.name + ' ' + state;
-    //this.log("cmd: " + cmd);
-    
-    var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';    
-    //this.log(fhem_url);
-        
-    request({url: fhem_url}, function(err, response, body) {
-
-      if (!err && response.statusCode == 200) {
-        this.currentValue.On = boolvalue;
-        callback();
-        //this.log("State change complete.");
-      } 
-      else {
-        callback(err)
-        this.log(err);
-        if(response)
-          this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
-      }
-    }.bind(this));
-  },
-  
-  /**
   * Characteristic.CurrentPosition
   */
   
   getCurrentPosition: function(callback) {
   
-    var cmd = '{ReadingsVal("' + this.name + '","pct","")}';
+    var cmd = '{ReadingsVal("' + this.name + '","currentPosition","")}'; 
     var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';
     
     request.get({url: fhem_url}, function(err, response, body) {
       
       if (!err && response.statusCode == 200) {
+        //this.log('body: ' + body);
         this.currentValue.CurrentPosition = parseInt(body.trim());
-        this.log('getCurrentPosition: ' + this.currentValue.CurrentPosition);
+        //this.log('getCurrentPosition: ' + this.currentValue.CurrentPosition);
         callback(null, this.currentValue.CurrentPosition);
         
       } 
@@ -272,14 +207,14 @@ FhemWindowCovering.prototype = {
   
   getTargetPosition: function(callback) {
   
-    var cmd = '{ReadingsVal("' + this.name + '","pct","")}';  // todo Target in ZWave ?
+    var cmd = '{ReadingsVal("' + this.name + '","state","")}'; 
     var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';
     
     request.get({url: fhem_url}, function(err, response, body) {
       
       if (!err && response.statusCode == 200) {
         this.currentValue.TargetPosition = parseInt(body.trim());
-        this.log('getTargetPosition: ' + this.currentValue.TargetPosition);
+        //this.log('getTargetPosition: ' + this.currentValue.TargetPosition);
         callback(null, this.currentValue.TargetPosition);
       } 
       else {
@@ -291,28 +226,28 @@ FhemWindowCovering.prototype = {
     }.bind(this));
   },
   
-  setTargetPosition: function(value) {
+  setTargetPosition: function(value, callback) {
 
     this.log('setTargetPosition: ' + value);
     callback();
     
-    // todo ... issue: control grayed out
+    // todo  !!! issue: control grayed out
     
     /*
-    var timer;
-    if(timer) {
-      clearTimeout(timer);
+    if(this.timeoutObj) {
+      clearTimeout(this.timeoutObj);
     }
     
     var cmd = 'set ' + this.name + ' dim ' + value;
     //this.log("cmd: " + cmd);
      
-    timer = setTimeout(function() { 
+    this.timeoutObj =  = setTimeout(function() { 
       clearTimeout(timer);
       this.sendCmd(cmd); 
       //this.log("setBrightness: " + value); 
     }.bind(this), delay);
     */
+    
   },
   
   /**
@@ -320,16 +255,36 @@ FhemWindowCovering.prototype = {
   */
     
   getPositionState: function(callback) {
-  
-    this.log('getPositionState');
-    callback(null,this.currentValue.PositionState); // todo 0: Closing ,1: Opening, 2: Stopped
+      
+    var cmd = '{ReadingsVal("' + this.name + '","currentPosition","")}';
+    var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';
+
+    request.get({url: fhem_url}, function(err, response, body) {
+      //this.log('body: ' + body);
+      if (!err && response.statusCode == 200) {
+        var state = parseInt(body.trim());
+        
+        //this.log('getPositionState: ' + state);
+        switch(state) {
+          case 0:   this.currentValue.PositionState = Characteristic.PositionState.DECREASING; break;
+          case 1:   this.currentValue.PositionState = Characteristic.PositionState.INCREASING; break;
+          case 2:   this.currentValue.PositionState = Characteristic.PositionState.STOPPED; break;
+          default:  // nothing
+        }  
+        callback(null, this.currentValue.PositionState);
+      } 
+      else {
+        callback(err);
+        this.log(err);
+        if(response)
+          this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
+      }
+    }.bind(this));
+    
+    // todo
   },
   
-  setPositionState: function(value) {
-  
-    this.log('setPositionState: ' + value);
-    callback();
-  },
+  setPositionState: null,  // N/S
   
   /**
   * Accessory Information Identify 
@@ -344,6 +299,10 @@ FhemWindowCovering.prototype = {
   * Services and Characteristics
   */
   
+  /**
+ * Service "Window Covering"
+ */
+ 
   getServices: function() {
   
     var informationService = new Service.AccessoryInformation();
@@ -359,25 +318,25 @@ FhemWindowCovering.prototype = {
     this.currentCharacteristic.CurrentPosition = FhemWindowCoveringService
       .getCharacteristic(Characteristic.CurrentPosition)
       .on('get', this.getCurrentPosition.bind(this));
-    this.currentValue.CurrentPosition = 0;
+    this.currentValue.CurrentPosition = 0;  // 0 .. 100
 
     this.currentCharacteristic.TargetPosition = FhemWindowCoveringService
       .getCharacteristic(Characteristic.TargetPosition)
       .on('get', this.getTargetPosition.bind(this))
       .on('set', this.setTargetPosition.bind(this));
-    this.currentValue.TargetPosition = 0;
+    this.currentValue.TargetPosition = 0;  // 0 .. 100
       
     this.currentCharacteristic.PositionState = FhemWindowCoveringService
       .getCharacteristic(Characteristic.PositionState)
-      .on('get', this.getPositionState.bind(this))
-      .on('set', this.setPositionState.bind(this));
-    this.currentValue.PositionState = 2;
+      .on('get', this.getPositionState.bind(this));
       
-    this.currentCharacteristic.On = FhemWindowCoveringService
-      .addCharacteristic(Characteristic.On)
-      .on('get', this.getPowerState.bind(this))
-      .on('set', this.setPowerState.bind(this));
-    this.currentValue.On = false;
+    // The value property of PositionState must be one of the following:
+    // Characteristic.PositionState.DECREASING = 0;
+    // Characteristic.PositionState.INCREASING = 1;
+    // Characteristic.PositionState.STOPPED = 2;
+    this.currentValue.PositionState = Characteristic.PositionState.STOPPED;
+    
+
       
     return [informationService, FhemWindowCoveringService];
   }
