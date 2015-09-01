@@ -135,6 +135,11 @@ FhemGarageDoorOpener.prototype = {
               case 4:   fhemvalue = Characteristic.CurrentDoorState.STOPPED; break;
               default:  // nothing
             }  
+            
+            if(fhemvalue != this.currentValue.CurrentDoorState) { 
+              this.currentValue.CurrentDoorState = fhemvalue;
+              this.Characteristic.CurrentDoorState.setValue(fhemvalue);
+            }
             break;
             
           case (this.name + '-obstruction'):
