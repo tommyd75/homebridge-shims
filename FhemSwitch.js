@@ -75,7 +75,7 @@ FhemSwitch.prototype = {
   */
   
   mylog: function mylog(msg) {
-    var now = new Date().toLocaleString().slice(0, 19);;
+    var now = new Date().toLocaleString();
     var logmsg = now + " [" + this.name + "] " + msg;
     console.log(logmsg);
   },
