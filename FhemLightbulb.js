@@ -72,29 +72,29 @@ var base_url = 'http://' + url + ':' + port;
  * @param   Number  v       The value (brigthness)
  * @return  HexNumber       The RGB representation
  */
-function hsv2rgb(h, s, v){
-    var r, g, b;
+function hsv2rgb(h, s, v) {
+  var r, g, b;
 
-    var i = Math.floor(h * 6);
-    var f = h * 6 - i;
-    var p = v * (1 - s);
-    var q = v * (1 - f * s);
-    var t = v * (1 - (1 - f) * s);
+  var i = Math.floor(h * 6);
+  var f = h * 6 - i;
+  var p = v * (1 - s);
+  var q = v * (1 - f * s);
+  var t = v * (1 - (1 - f) * s);
 
-    switch(i % 6){
-      case 0: r = v, g = t, b = p; break;
-      case 1: r = q, g = v, b = p; break;
-      case 2: r = p, g = v, b = t; break;
-      case 3: r = p, g = q, b = v; break;
-      case 4: r = t, g = p, b = v; break;
-      case 5: r = v, g = p, b = q; break;
-    }
+  switch(i % 6){
+    case 0: r = v, g = t, b = p; break;
+    case 1: r = q, g = v, b = p; break;
+    case 2: r = p, g = v, b = t; break;
+    case 3: r = p, g = q, b = v; break;
+    case 4: r = t, g = p, b = v; break;
+    case 5: r = v, g = p, b = q; break;
+  }
 
-    r = Math.round(r*255);
-    g = Math.round(g*255);
-    b = Math.round(b*255);
-    
-    return Number(0x1000000 + r*0x10000 + g*0x100 + b).toString(16).substring(1).toUpperCase();
+  r = Math.round(r*255);
+  g = Math.round(g*255);
+  b = Math.round(b*255);
+  // console.log("r: " + r + " g: " + g + " b: " + b);
+  return Number(0x1000000 + r*0x10000 + g*0x100 + b).toString(16).substring(1).toUpperCase();
 }
 
 /**
@@ -131,7 +131,7 @@ function rgb2hsv(r, g, b) {
 }
 
 function FhemLightbulb(log, config) {
-  this.log = log;
+  this.log = this.mylog;
   this.name = config["name"];
   this.base_url = base_url;
   this.connection = { 'base_url': this.base_url, 'request': request };
@@ -145,6 +145,16 @@ function FhemLightbulb(log, config) {
 
 FhemLightbulb.prototype = {
 
+  /**
+  * FHEM mylog
+  */
+  
+  mylog: function mylog(msg) {
+    var now = new Date().toLocaleString();
+    var logmsg = now + " [" + this.name + "] " + msg;
+    console.log(logmsg);
+  },
+  
   /**
   * FHEM Longpoll
   */
@@ -360,10 +370,10 @@ FhemLightbulb.prototype = {
   
   setBrightness: function(value, callback) {
 
-    //if (value == this.currentValue.Brightness) {
-    //  callback();
-    //  return;
-    //}
+    if (value == this.currentValue.Brightness) {
+      callback();
+      return;
+    }
 
     if(this.timeoutObj) {
       clearTimeout(this.timeoutObj);
@@ -423,7 +433,7 @@ FhemLightbulb.prototype = {
 
     if (value != this.currentValue.Saturation) {
       this.currentValue.Saturation = value;
-      this.setRGB();
+      // this.setRGB();
     }
     callback();
   },
@@ -459,7 +469,6 @@ FhemLightbulb.prototype = {
   setRGB: function() {
 
     value = hsv2rgb(this.currentValue.Hue / 360, this.currentValue.Saturation / 100, this.currentValue.Brightness / 100);
-    //this.log("rgb: " + value);
     cmd = 'set ' + this.name + ' rgb ' + value;
     
     var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';    
