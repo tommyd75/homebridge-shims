@@ -2,11 +2,11 @@
 // Copy this file into the folder: homebridge/accessories
 
 /*
-For ZWave FIBARO System FGRM222 Roller Shutter Controller 2
+For ZWave FIBARO System FGRM-222 Roller Shutter Controller 2
 The following attribute in fhem.cfg has to be added (replace garden_blind with the name of your device):
 
 The attribute in fhem.cfg has to be added (replace led_bulb with the name of your device):
-onoff {ReadingsVal("garden_blind","state","")=~/^on|^off/?ReadingsVal("garden_blind","state",""):ReadingsVal("garden_blind","onoff","")},pct  {ReadingsVal("garden_blind","state","")=~"dim"?ReadingsNum("garden_blind","state",""):ReadingsVal("garden_blind","state","")=~"off"?0:ReadingsVal("garden_blind","state","")=~"on"?99:ReadingsVal("garden_blind","pct","")}
+onoff {ReadingsVal("garden_blind","state","")=~/^on|^off/?ReadingsVal("garden_blind","state",""):ReadingsVal("garden_blind","onoff","")},pct  {ReadingsVal("garden_blind","state","")=~/^dim/?ReadingsNum("garden_blind","state",""):ReadingsVal("garden_blind","state","")=~/^off/?0:ReadingsVal("garden_blind","state","")=~/^on/?99:ReadingsVal("garden_blind","pct","")}
 */
 
 
@@ -53,7 +53,10 @@ module.exports = {
 
 'use strict';
 
-// Load url
+/**
+* Load url
+*/
+  
 var configPath = path.join(__dirname, "../config.json");
 var config = JSON.parse(fs.readFileSync(configPath));
 var url = config.global.url;
@@ -61,8 +64,13 @@ var port = config.global.port;
 var base_url = 'http://' + url + ':' + port;
 //console.log("base_url " + base_url);
 
+/**
+* Accessory: FhemAllrounder
+*/
+
 function FhemAllrounder(log, config) {
-  this.log = log;
+  //this.log = log;
+  this.log = this.mylog;
   this.name = config["name"];
   this.base_url = base_url;
   this.connection = { 'base_url': this.base_url, 'request': request };
@@ -76,6 +84,16 @@ function FhemAllrounder(log, config) {
 
 FhemAllrounder.prototype = {
 
+  /**
+  * FHEM mylog
+  */
+  
+  mylog: function mylog(msg) {
+    var now = new Date().toLocaleString();
+    var logmsg = now + " [" + this.name + "] " + msg;
+    console.log(logmsg);
+  },
+  
   /**
   * FHEM Longpoll
   */
@@ -130,20 +148,32 @@ FhemAllrounder.prototype = {
               case 'on':  fhemvalue = true; break;
               case 'off': fhemvalue = false; break;
             }
-            reading = 'On';
-            break;
             
+            if(fhemvalue != this.currentValue.On) { 
+              this.log( 'Fhem onoff: ' + fhemvalue);
+              this.currentValue.On = fhemvalue;
+              this.Characteristic.On.setValue(fhemvalue);
+            }
+            break;
+          
           case (this.name + '-dim'):
             fhemvalue = parseInt(dataobj[1]);
-            reading = 'Brightness';
+          
+            // Fibaro FGRM-222
+            switch (fhemvalue) {
+              case 1:   fhemvalue = 0; break;
+              case 99:  fhemvalue = 100; break;
+              default:  // nothing
+            }
+                          
+            if(fhemvalue != this.currentValue.Brightness) {
+              this.log( 'Fhem Brightness: ' + fhemvalue);
+              this.currentValue.Brightness = fhemvalue;
+              this.Characteristic.Brightness.setValue(fhemvalue);
+            }
             break;
-        
+         
           default: // nothing
-        }
-        if(fhemvalue != this.currentValue[reading]) { 
-          this.log("reading: " + reading + ", fhemvalue: "+ fhemvalue);
-          this.currentValue[reading] = fhemvalue;
-          this.Characteristic[reading].setValue(fhemvalue);
         }
       }
       
@@ -181,7 +211,7 @@ FhemAllrounder.prototype = {
         if (state.match(/^[A-D]./))  // EnOcean
           state = state.slice(1,2);
         
-        //this.log('getPowerState: >' + state + '<');
+        this.log('getPowerState: >' + state + '<');
                 
         switch (state) {
           case  '0':
@@ -204,12 +234,14 @@ FhemAllrounder.prototype = {
   
   setPowerState: function(boolvalue, callback) {
        
-    var state = "";
+    this.log("setStatePower: " + boolvalue);
     
     if (boolvalue == this.currentValue.On) {
       callback();
       return;
     }
+    
+    var state = "";
     
     switch (boolvalue) {
       case 0:
@@ -223,7 +255,7 @@ FhemAllrounder.prototype = {
     }
     
     var cmd = 'set ' + this.name + ' ' + state;
-    //this.log("cmd: " + cmd);
+    this.log("cmd: " + cmd);
     
     var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';    
     //this.log(fhem_url);
@@ -257,6 +289,10 @@ FhemAllrounder.prototype = {
       
       if (!err && response.statusCode == 200) {
         this.currentValue.Brightness = parseInt(body.trim());
+        
+        if(this.currentValue.Brightness == 99) this.currentValue.Brightness = 100;  // Fibaro FGRM-222
+        if(this.currentValue.Brightness == 1) this.currentValue.Brightness = 0;     // Fibaro FGRM-222
+        
         //this.log('getBrightness: >' + body.trim() + '< this.currentValue.Brightness: ' + this.currentValue.Brightness);
         callback(null, this.currentValue.Brightness);
       } 
@@ -275,40 +311,45 @@ FhemAllrounder.prototype = {
       callback();
       return;
     }
+  
+    callback();  // callback immmidiatly to avoid display delay 
+    
+    if(value == 100) value = 99;  // Fibaro FGRM-222 
     
     if(this.timeoutObj) {
       clearTimeout(this.timeoutObj);
     }
     
     var cmd = 'set ' + this.name + ' dim ' + value;
-    this.log("cmd: " + cmd);
+    //this.log("cmd: " + cmd);
     
     var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';         
     //this.log(fhem_url);
      
     this.timeoutObj = setTimeout(function() { 
-      //clearTimeout(timer);
       
       request({url: fhem_url}, function(err, response, body) {
 
         if (!err && response.statusCode == 200) {
           this.currentValue.Brightness = value;
-          callback();
-          //this.log("State change complete.");
+          this.log("cmd: " + cmd);
+          // callback();
         } 
         else {
-          callback(err);
+          // callback(err);
           this.log(err);
           if(response)
             this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
         }
       }.bind(this));
-    }.bind(this), 500);
+    }.bind(this), 1000);
   },
   
  /**
   * Characteristic.HoldPosition
   */
+
+  getHoldPosition: null, //  N/A
   
   setHoldPosition: function(boolvalue, callback) {
   
@@ -380,9 +421,9 @@ FhemAllrounder.prototype = {
     var informationService = new Service.AccessoryInformation();
     
     informationService
-      .setCharacteristic(Characteristic.Manufacturer, "flurin")
-      .setCharacteristic(Characteristic.Model, "FHEM Allroundr")
-      .setCharacteristic(Characteristic.SerialNumber, "4711")
+      .setCharacteristic(Characteristic.Manufacturer, "Aeon Labs")
+      .setCharacteristic(Characteristic.Model, "Aeotec FGRM-222")
+      .setCharacteristic(Characteristic.SerialNumber, "V2/2")
       .setCharacteristic(Characteristic.Name, this.name);
         
     //var FhemAllrounderService = new Service.Switch();
@@ -393,18 +434,21 @@ FhemAllrounder.prototype = {
       .on('get', this.getPowerState.bind(this))
       .on('set', this.setPowerState.bind(this));
     this.currentValue.On = false;
-      
+ 
     this.Characteristic.Brightness = FhemAllrounderService
       .addCharacteristic(Characteristic.Brightness)
       .on('get', this.getBrightness.bind(this))
       .on('set', this.setBrightness.bind(this));
-    this.currentValue.Brightness = 0;
+    this.currentValue.Brightness = 0;   // 0 .. 100
       
     this.Characteristic.HoldPosition = FhemAllrounderService
       .addCharacteristic(Characteristic.HoldPosition)
       .on('set', this.setHoldPosition.bind(this));
     this.currentValue.HoldPosition = false;
-
+    
+    this.Characteristic.HoldPosition.readable = true;
+    this.Characteristic.HoldPosition.setValue(this.currentValue.HoldPosition);
+    
     return [informationService, FhemAllrounderService];
   }
 };
