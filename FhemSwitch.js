@@ -43,7 +43,10 @@ module.exports = {
 
 'use strict';
 
-// Load url
+/**
+* Load url
+*/
+  
 var configPath = path.join(__dirname, "../config.json");
 var config = JSON.parse(fs.readFileSync(configPath));
 var url = config.global.url;
@@ -53,7 +56,7 @@ var base_url = 'http://' + url + ':' + port;
 
 
 function FhemSwitch(log, config) {
-  this.log = log;
+  this.log = this.mylog;
   this.name = config["name"];
   this.base_url = base_url;
   this.connection = { 'base_url': this.base_url, 'request': request };
@@ -67,6 +70,16 @@ function FhemSwitch(log, config) {
 
 FhemSwitch.prototype = {
 
+  /**
+  * FHEM mylog
+  */
+  
+  mylog: function mylog(msg) {
+    var today = new Date().toISOString().slice(0, 19);
+    var logmsg = today + " [" + this.name + "] " + msg;
+    console.log(logmsg);
+  },
+  
   /**
   * FHEM Longpoll
   */
@@ -273,7 +286,7 @@ FhemSwitch.prototype = {
       .on('get', this.getPowerState.bind(this))
       .on('set', this.setPowerState.bind(this));
     this.currentValue.On = false;
-      
+    
     return [informationService, FhemSwitchService];
   }
 };
