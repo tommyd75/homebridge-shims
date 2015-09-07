@@ -11,8 +11,6 @@ attr bathroom_blind userReadings onoff {ReadingsVal("bathroom_blind","state","")
   0:ReadingsVal("bathroom_blind","state","")=~/'^on/?99:ReadingsVal("bathroom_blind","dim","")},  
   positionSlat {ReadingsVal("bathroom_blind","state","")=~/^positionSlat/?
   ReadingsNum("bathroom_blind","state",""):ReadingsVal("bathroom_blind","positionSlat","")}
-define FileLog_bathroom_blind FileLog ./log/bathroom_blind-%Y.log bathroom_blind
-
 */
 
 
