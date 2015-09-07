@@ -78,7 +78,7 @@ function FhemFibaroRollerShutter(log, config) {
   //this.log = log;
   this.log = this.mylog;
   this.name = config["name"];
-  this.slat = config["slat"];
+  this.slat = JSON.parse(config["slat"]);
   
   this.base_url = base_url;
   this.connection = { 'base_url': this.base_url, 'request': request };
@@ -161,7 +161,7 @@ FhemFibaroRollerShutter.prototype = {
               this.log( 'Fhem onoff: ' + fhemvalue);
               this.currentValue.On = fhemvalue;
               this.Characteristic.On.setValue(fhemvalue);
-            }
+            }           
             break;
           
           case (this.name + '-dim'):
@@ -472,6 +472,7 @@ FhemFibaroRollerShutter.prototype = {
     
     if(this.slat) {
       // used for the Slat Position
+      this.log("getServices ");
       this.Characteristic.SlatPosition = FhemFibaroRollerShutterService
         .addCharacteristic(Characteristic.Saturation)
         .on('get', this.getSlatPosition.bind(this))
