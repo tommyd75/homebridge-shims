@@ -5,7 +5,14 @@
 For ZWave FIBARO System FGRM-222 Roller Shutter 2
 The following attribute in fhem.cfg has to be added (replace garden_blind with the name of your device):
 
-ReadingsVal("bathroom_blind","state",""):ReadingsVal("bathroom_blind","onoff","")},dim  {ReadingsVal("bathroom_blind","state","")=~/^dim/?ReadingsNum("bathroom_blind","state",""):ReadingsVal("bathroom_blind","state","")=~/^off/?0:ReadingsVal("bathroom_blind","state","")=~/'^on/?99:ReadingsVal("bathroom_blind","dim","")},positionSlat {ReadingsVal("bathroom_blind","state","")=~/^positionSlat/?ReadingsNum("bathroom_blind","state",""):ReadingsVal("bathroom_blind","positionSlat","")}
+attr bathroom_blind userReadings onoff {ReadingsVal("bathroom_blind","state","")=~/^on|^off/?ReadingsVal("bathroom_blind","state",""):ReadingsVal("bathroom_blind","onoff","")},
+  dim  {ReadingsVal("bathroom_blind","state","")=~/^dim/?
+  ReadingsNum("bathroom_blind","state",""):ReadingsVal("bathroom_blind","state","")=~/^off/?
+  0:ReadingsVal("bathroom_blind","state","")=~/'^on/?99:ReadingsVal("bathroom_blind","dim","")},  
+  positionSlat {ReadingsVal("bathroom_blind","state","")=~/^positionSlat/?
+  ReadingsNum("bathroom_blind","state",""):ReadingsVal("bathroom_blind","positionSlat","")}
+define FileLog_bathroom_blind FileLog ./log/bathroom_blind-%Y.log bathroom_blind
+
 */
 
 
