@@ -5,8 +5,7 @@
 For ZWave FIBARO System FGRM-222 Roller Shutter 2
 The following attribute in fhem.cfg has to be added (replace garden_blind with the name of your device):
 
-The attribute in fhem.cfg has to be added (replace led_bulb with the name of your device):
-onoff {ReadingsVal("garden_blind","state","")=~/^on|^off/?ReadingsVal("garden_blind","state",""):ReadingsVal("garden_blind","onoff","")},pct  {ReadingsVal("garden_blind","state","")=~/^dim/?ReadingsNum("garden_blind","state",""):ReadingsVal("garden_blind","state","")=~/^off/?0:ReadingsVal("garden_blind","state","")=~/^on/?99:ReadingsVal("garden_blind","pct","")}
+ReadingsVal("bathroom_blind","state",""):ReadingsVal("bathroom_blind","onoff","")},dim  {ReadingsVal("bathroom_blind","state","")=~/^dim/?ReadingsNum("bathroom_blind","state",""):ReadingsVal("bathroom_blind","state","")=~/^off/?0:ReadingsVal("bathroom_blind","state","")=~/'^on/?99:ReadingsVal("bathroom_blind","dim","")},positionSlat {ReadingsVal("bathroom_blind","state","")=~/^positionSlat/?ReadingsNum("bathroom_blind","state",""):ReadingsVal("bathroom_blind","positionSlat","")}
 */
 
 
@@ -30,10 +29,12 @@ onoff {ReadingsVal("garden_blind","state","")=~/^on|^off/?ReadingsVal("garden_bl
         {
             "accessory": "FhemFibaroRollerShutter",
             "name": "garden_blind"
+            "slat": "false"
         },
         {
             "accessory": "FhemFibaroRollerShutter",
-            "name": "bathroom_blind"
+            "name": "bathroom_blind",
+            "slat": "true"
         }
     ]                      
 }
@@ -72,6 +73,8 @@ function FhemFibaroRollerShutter(log, config) {
   //this.log = log;
   this.log = this.mylog;
   this.name = config["name"];
+  this.slat = config["slat"];
+  
   this.base_url = base_url;
   this.connection = { 'base_url': this.base_url, 'request': request };
   
@@ -166,10 +169,23 @@ FhemFibaroRollerShutter.prototype = {
               default:  // nothing
             }
                           
-            if(fhemvalue != this.currentValue.Brightness) {
-              this.log( 'Fhem Brightness: ' + fhemvalue);
-              this.currentValue.Brightness = fhemvalue;
-              this.Characteristic.Brightness.setValue(fhemvalue);
+            if(fhemvalue != this.currentValue.BlindPosition) {
+              this.log( 'Fhem BlindPosition: ' + fhemvalue);
+              this.currentValue.BlindPosition = fhemvalue;
+              this.Characteristic.BlindPosition.setValue(fhemvalue);
+            }
+            break;
+            
+          case (this.name + '-positionSlat'):
+            fhemvalue = parseInt(dataobj[1]);
+          
+            // Fibaro FGRM-222
+            fhemvalue = parseInt(fhemvalue / 0.9);
+                          
+            if(fhemvalue != this.currentValue.SlatPosition) {
+              this.log( 'Fhem SlatPosition: ' + fhemvalue);
+              this.currentValue.SlatPosition = fhemvalue;
+              this.Characteristic.SlatPosition.setValue(fhemvalue);
             }
             break;
          
@@ -277,10 +293,10 @@ FhemFibaroRollerShutter.prototype = {
   },
   
   /**
-  * Characteristic.Brightness
+  * Characteristic.BlindPosition
   */
   
-  getBrightness: function(callback) {
+  getBlindPosition: function(callback) {
   
     var cmd = '{ReadingsVal("' + this.name + '","dim","")}';
     var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';
@@ -288,13 +304,13 @@ FhemFibaroRollerShutter.prototype = {
     request.get({url: fhem_url}, function(err, response, body) {
       
       if (!err && response.statusCode == 200) {
-        this.currentValue.Brightness = parseInt(body.trim());
+        this.currentValue.BlindPosition = parseInt(body.trim());
         
-        if(this.currentValue.Brightness == 99) this.currentValue.Brightness = 100;  // Fibaro FGRM-222
-        if(this.currentValue.Brightness == 1) this.currentValue.Brightness = 0;     // Fibaro FGRM-222
+        if(this.currentValue.BlindPosition == 99) this.currentValue.BlindPosition = 100;  // Fibaro FGRM-222
+        if(this.currentValue.BlindPosition == 1) this.currentValue.BlindPosition = 0;     // Fibaro FGRM-222
         
-        //this.log('getBrightness: >' + body.trim() + '< this.currentValue.Brightness: ' + this.currentValue.Brightness);
-        callback(null, this.currentValue.Brightness);
+        //this.log('getBlindPosition: >' + body.trim() + '< this.currentValue.BlindPosition: ' + this.currentValue.BlindPosition);
+        callback(null, this.currentValue.BlindPosition);
       } 
       else {
         callback(err);
@@ -305,9 +321,9 @@ FhemFibaroRollerShutter.prototype = {
     }.bind(this));
   },
   
-  setBrightness: function(value, callback) {
+  setBlindPosition: function(value, callback) {
     
-    if (value == this.currentValue.Brightness) {
+    if (value == this.currentValue.BlindPosition) {
       callback();
       return;
     }
@@ -331,7 +347,7 @@ FhemFibaroRollerShutter.prototype = {
       request({url: fhem_url}, function(err, response, body) {
 
         if (!err && response.statusCode == 200) {
-          this.currentValue.Brightness = value;
+          this.currentValue.BlindPosition = value;
           this.log("cmd: " + cmd);
           // callback();
         } 
@@ -345,56 +361,25 @@ FhemFibaroRollerShutter.prototype = {
     }.bind(this), 1000);
   },
   
- /**
-  * Characteristic.HoldPosition
+  /**
+  * Characteristic.SlatPosition  (Horizontal Tilt Angle)
   */
-
-  getHoldPosition: null, //  N/A
   
-  setHoldPosition: function(boolvalue, callback) {
+  getSlatPosition: function(callback) {
   
-    //this.log('setHoldPosition: ' + boolvalue);
-  
-    if (boolvalue == this.currentValue.HoldPosition) {
-      callback();
-      return;
-    }
+    var cmd = '{ReadingsVal("' + this.name + '","positionSlat","")}';
+    var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';
     
-    var state = "";
-    
-    switch (boolvalue) {
-      case 0:
-      case false:       break;
-      case 1:
-      case true:        state = 'stop';  break; 
-      default:          
-        this.log("setPowerState: state undefined " + boolvalue + "<");
-        callback();
-        return;
-    }
-    
-    if (state != 'stop') {
-      this.currentValue.HoldPosition = boolvalue;
-      callback();
-      return;
-    }
-    
-    var cmd = 'set ' + this.name + ' ' + state;
-    //this.log("cmd: " + cmd);
-    
-    var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';    
-    //this.log(fhem_url);
-    
-    
-    request({url: fhem_url}, function(err, response, body) {
-
+    request.get({url: fhem_url}, function(err, response, body) {
+      
       if (!err && response.statusCode == 200) {
-        this.currentValue.HoldPosition = boolvalue;
-        this.log("setHoldPosition: " + boolvalue);
-        callback();
-      }
+        this.currentValue.SlatPosition = parseInt(parseInt(body.trim()) / 0.9); // Fibaro FGRM-222
+        
+        //this.log('getSlatPosition: ' + body.trim() + ' this.currentValue.SlatPosition: ' + this.currentValue.SlatPosition);
+        callback(null, this.currentValue.SlatPosition);
+      } 
       else {
-        callback(err)
+        callback(err);
         this.log(err);
         if(response)
           this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
@@ -402,6 +387,45 @@ FhemFibaroRollerShutter.prototype = {
     }.bind(this));
   },
   
+  setSlatPosition: function(value, callback) {
+    
+    if (value == this.currentValue.SlatPosition) {
+      callback();
+      return;
+    }
+  
+    callback();  // callback immmidiatly to avoid display delay 
+    
+    if(this.timeoutObj) {
+      clearTimeout(this.timeoutObj);
+    }
+    
+    value = parseInt(value * 0.9);  // Fibaro FGRM-222 0 .. 100 => 0 .. 90
+    
+    var cmd = 'set ' + this.name + ' positionSlat ' + value;
+    //this.log("cmd: " + cmd);
+    
+    var fhem_url = this.base_url + '/fhem?cmd=' + cmd + '&XHR=1';         
+    //this.log(fhem_url);
+     
+    this.timeoutObj = setTimeout(function() { 
+      
+      request({url: fhem_url}, function(err, response, body) {
+
+        if (!err && response.statusCode == 200) {
+          this.currentValue.SlatPosition = value;
+          this.log("cmd: " + cmd);
+          // callback();
+        } 
+        else {
+          // callback(err);
+          this.log(err);
+          if(response)
+            this.log("statusCode: " + response.statusCode + " Message: " + response.statusMessage );
+        }
+      }.bind(this));
+    }.bind(this), 1000);
+  },
     
   /**
   * Accessory Information Identify 
@@ -434,18 +458,21 @@ FhemFibaroRollerShutter.prototype = {
       .on('set', this.setPowerState.bind(this));
     this.currentValue.On = false;
  
-    this.Characteristic.Brightness = FhemFibaroRollerShutterService
+    // used for the Blind Position
+    this.Characteristic.BlindPosition = FhemFibaroRollerShutterService
       .addCharacteristic(Characteristic.Brightness)
-      .on('get', this.getBrightness.bind(this))
-      .on('set', this.setBrightness.bind(this));
-    this.currentValue.Brightness = 0;   // 0 .. 100
-      
-    this.Characteristic.HoldPosition = FhemFibaroRollerShutterService
-      .addCharacteristic(Characteristic.HoldPosition)
-      .on('set', this.setHoldPosition.bind(this));
-    this.currentValue.HoldPosition = false;
+      .on('get', this.getBlindPosition.bind(this))
+      .on('set', this.setBlindPosition.bind(this));
+    this.currentValue.BlindPosition = 0;   // 0 .. 100
     
-    this.Characteristic.HoldPosition.readable = true;
+    if(this.slat) {
+      // used for the Slat Position
+      this.Characteristic.SlatPosition = FhemFibaroRollerShutterService
+        .addCharacteristic(Characteristic.Saturation)
+        .on('get', this.getSlatPosition.bind(this))
+        .on('set', this.setSlatPosition.bind(this));
+      this.currentValue.SlatPosition = 0;   // 0 .. 100 (0 .. 90)
+    }
     
     return [informationService, FhemFibaroRollerShutterService];
   }
