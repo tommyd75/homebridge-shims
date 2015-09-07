@@ -3,7 +3,7 @@
 
 /*
 For ZWave FIBARO System FGRM-222 Roller Shutter 2
-The following attribute in fhem.cfg has to be added (replace garden_blind with the name of your device):
+The following attribute in fhem.cfg has to be added (replace bathroom_blind with the name of your device):
 
 attr bathroom_blind userReadings onoff {ReadingsVal("bathroom_blind","state","")=~/^on|^off/?ReadingsVal("bathroom_blind","state",""):ReadingsVal("bathroom_blind","onoff","")},
   dim  {ReadingsVal("bathroom_blind","state","")=~/^dim/?
