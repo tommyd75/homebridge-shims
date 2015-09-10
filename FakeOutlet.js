@@ -10,8 +10,8 @@
         "pin": "031-45-154"
     },
 
-    "platforms": [],                        
-                          
+    "platforms": [],                    
+
     "accessories": [
         {
             "accessory": "FakeOutlet",
@@ -31,7 +31,6 @@ module.exports = {
 
 'use strict';
 
-
 function FakeOutlet(log, config) {
   this.log = log;
   this.name = config["name"];
@@ -47,14 +46,11 @@ FakeOutlet.prototype = {
   */
   
   getPowerState: function(callback) {
-
-    
     this.log("getPowerState: " + this.currentValue.On);
     callback(null, this.currentValue.On);
   },
   
   setPowerState: function(boolvalue, callback) {
-    
     this.log("setPowerState: " + boolvalue);
     this.currentValue.On = boolvalue;
     callback();
@@ -65,7 +61,6 @@ FakeOutlet.prototype = {
   */
 
   getOutletInUse: function(callback) {
-    
     this.log('getOutletInUse');
     callback(null,this.currentValue.OutletInUse);   // true/false
   },
